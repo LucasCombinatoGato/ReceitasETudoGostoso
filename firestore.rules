@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/recipes/{recipeId} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function hasValidRecipeData() {
+        return request.resource.data.keys().hasOnly([
+            'title',
+            'sourceId',
+            'stats',
+            'ingredients',
+            'instructions'
+          ])
+          && request.resource.data.keys().hasAll([
+            'title',
+            'sourceId',
+            'stats',
+            'ingredients',
+            'instructions'
+          ])
+          && request.resource.data.title is string
+          && request.resource.data.sourceId is string
+          && request.resource.data.stats is map
+          && request.resource.data.ingredients is list
+          && request.resource.data.instructions is list
+          && request.resource.data.ingredients.size() <= 30
+          && request.resource.data.instructions.size() <= 30;
+      }
+
+      allow read, delete: if isOwner();
+      allow create, update: if isOwner() && hasValidRecipeData();
+    }
+  }
+}
